@@ -33,6 +33,19 @@ public sealed class ReadingPreferencesTests
     }
 
     [Theory]
+    [InlineData(1.2, 1.2)]
+    [InlineData(1.3, 1.3)]
+    [InlineData(1.4, 1.4)]
+    [InlineData(1.05, 1.2)]
+    [InlineData(2.5, 2.0)]
+    public void NormalizeKeepsLineHeightsInTheSupportedRange(double requested, double expected)
+    {
+        var normalized = ReadingPreferences.Normalize(ReadingPreferences.Default with { LineHeight = requested });
+
+        Assert.Equal(expected, normalized.LineHeight);
+    }
+
+    [Theory]
     [InlineData(580, ReadingPreferences.NarrowContentWidth)]
     [InlineData(720, ReadingPreferences.MediumContentWidth)]
     [InlineData(860, ReadingPreferences.WideContentWidth)]
