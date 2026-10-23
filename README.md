@@ -88,7 +88,7 @@ open /Applications/MarkMello.app
 
 ## Build from source
 
-.NET SDK 9 is required.
+.NET SDK 10 is required (the projects target `net10.0`).
 
 ```bash
 dotnet restore ./MarkMello.sln
@@ -106,6 +106,24 @@ Open a file from the command line:
 ```bash
 dotnet run --project ./src/MarkMello.Desktop/MarkMello.Desktop.csproj -- ./sample.md
 ```
+
+### Portable Windows build
+
+To get a self-contained build that runs from any folder without an installer (the .NET runtime is bundled, about 210 MB), run from the repository root in PowerShell:
+
+```powershell
+.\packaging\windows\build-portable.ps1 -OutputDir ..\MarkMello-outline
+```
+
+Without `-OutputDir` the build goes to `publish\portable-win-x64` (git-ignored). Requirements: Git and the .NET SDK 10 (`winget install Microsoft.DotNet.SDK.10`).
+
+- Start `MarkMello-outline.exe` from the output folder. Copy the whole folder, not just the exe. It also works on a clean Windows 10/11 x64 machine.
+- Close the program before rebuilding into the same folder.
+- The exe is renamed from `MarkMello.exe` on purpose: Windows remembers "Open with" applications by file name, so a second `MarkMello.exe` would be mistaken for the installed one.
+- To open `.md` files with it: right-click a file, Open with, Choose another app, Look for another app on this PC, and select `MarkMello-outline.exe`. The path is remembered, so redo this if you move the folder.
+- The update check is pointed at this fork (no releases there), so the portable copy is not replaced by the upstream release. Override with `-ReleaseOwner` and `-ReleaseRepo` if needed.
+- Settings are shared with an installed MarkMello (`%APPDATA%\MarkMello`).
+- Restoring from scratch: `git clone --branch feat/document-outline https://github.com/konicaRu/Markdown-my-viewer-MarkMello.git`, then run the script above.
 
 ## Keyboard shortcuts
 
