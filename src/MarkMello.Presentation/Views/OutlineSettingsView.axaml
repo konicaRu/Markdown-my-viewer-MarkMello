@@ -77,10 +77,23 @@
     <Border Classes="mm-setting-row">
       <StackPanel Spacing="8">
         <ToggleButton x:Name="LevelSizesToggle" Classes="mm-section-toggle" IsChecked="True">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="mm-setting-label" Text="{Binding OutlineLevelSizesLabel}" />
-            <TextBlock Classes="mm-setting-hint" TextWrapping="Wrap" Text="{Binding OutlineLevelSizesHint}" />
-          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="mm-setting-label" Text="{Binding OutlineLevelSizesLabel}" />
+              <TextBlock Classes="mm-setting-hint" TextWrapping="Wrap" Text="{Binding OutlineLevelSizesHint}" />
+            </StackPanel>
+            <Path Grid.Column="1"
+                  Classes="mm-section-chevron"
+                  Width="12"
+                  Height="12"
+                  VerticalAlignment="Center"
+                  Data="M3 4.5L6 7.5L9 4.5"
+                  Stroke="{DynamicResource MmTextFaintBrush}"
+                  StrokeThickness="1.4"
+                  StrokeLineCap="Round"
+                  StrokeJoin="Round"
+                  Fill="Transparent" />
+          </Grid>
         </ToggleButton>
         <ItemsControl x:Name="LevelSizesList"
                       IsVisible="{Binding #LevelSizesToggle.IsChecked}"

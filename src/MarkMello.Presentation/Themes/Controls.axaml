@@ -605,6 +605,13 @@
   <Style Selector="ToggleButton.mm-section-toggle:checked:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
+  <!-- Шеврон раскрытого раздела смотрит вниз, у свёрнутого повёрнут вправо, как в дереве сайдбара. -->
+  <Style Selector="ToggleButton.mm-section-toggle Path.mm-section-chevron">
+    <Setter Property="RenderTransform" Value="rotate(-90deg)" />
+  </Style>
+  <Style Selector="ToggleButton.mm-section-toggle:checked Path.mm-section-chevron">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
 
   <Style Selector="TextBlock.mm-slider-value">
     <Setter Property="Foreground" Value="{DynamicResource MmTextFaintBrush}" />
