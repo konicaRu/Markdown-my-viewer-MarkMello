@@ -30,6 +30,9 @@ public partial class ShellViewModel
     /// <summary>Кнопка живёт в плавающей группе; в edit mode группа скрыта автором, там остаётся горячая клавиша.</summary>
     public bool ShowsFloatingOutlineButton => IsViewer && !IsEditMode;
 
+    /// <summary>Плавающая группа кнопок видна, если нужна хотя бы одна из её кнопок.</summary>
+    public bool ShowsFloatingChromeGroup => ShowsFloatingAppMenuButton || ShowsFloatingOutlineButton;
+
     public bool IsOutlineToggleChecked => OutlinePreferences.IsVisible;
 
     public string OutlineToggleTooltip => _localization["OutlineToggleTooltip"];
@@ -46,6 +49,16 @@ public partial class ShellViewModel
             await _settings.LoadOutlinePreferencesAsync().ConfigureAwait(true));
 
     private void InitializeOutline() => PropertyChanged += OnOutlineSourcePropertyChanged;
+
+    // ShowsFloatingChromeGroup складывается из двух свойств, которые поднимаются в разных местах;
+    // слушаем их здесь, а не размазываем NotifyPropertyChangedFor по чужим файлам.
+    private void RaiseFloatingChromeGroupIfNeeded(string? propertyName)
+    {
+        if (propertyName is nameof(ShowsFloatingAppMenuButton) or nameof(ShowsFloatingOutlineButton))
+        {
+            OnPropertyChanged(nameof(ShowsFloatingChromeGroup));
+        }
+    }
 
     private void ApplyOutlinePreferences(OutlinePreferences preferences)
     {
@@ -92,6 +105,8 @@ public partial class ShellViewModel
 
     private void OnOutlineSourcePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        RaiseFloatingChromeGroupIfNeeded(e.PropertyName);
+
         switch (e.PropertyName)
         {
             case nameof(IsViewer):
@@ -152,6 +167,7 @@ public partial class ShellViewModel
     private void RaiseOutlineLayoutProperties()
     {
         OnPropertyChanged(nameof(ShowsOutline));
+        OnPropertyChanged(nameof(ShowsFloatingOutlineButton));
         OnPropertyChanged(nameof(Outline));
         OnPropertyChanged(nameof(OutlineLeftContent));
         OnPropertyChanged(nameof(OutlineRightContent));

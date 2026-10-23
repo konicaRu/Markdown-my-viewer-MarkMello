@@ -1,0 +1,150 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using MarkMello.Domain;
+using MarkMello.Presentation.ViewModels;
+
+namespace MarkMello.Presentation.Views;
+
+/// <summary>
+/// Размещение панели оглавления (ADR-0008): ширина колонок, перетаскивание границ
+/// и связь панели с активным хостом навигации (reader или editor).
+/// </summary>
+public partial class MainWindow
+{
+    private const int OutlineLeftColumn = 2;
+    private const int OutlineRightColumn = 6;
+
+    private OutlineViewModel? _attachedOutline;
+    private IOutlineNavigationHost? _outlineHost;
+    private bool _outlineHostRefreshScheduled;
+
+    private void SyncOutlineColumns()
+    {
+        if (SidebarLayout is not { ColumnDefinitions: { Count: > OutlineRightColumn } columns })
+        {
+            return;
+        }
+
+        var preferences = _viewModel.OutlinePreferences;
+        SetOutlineColumn(columns[OutlineLeftColumn], _viewModel.OutlineLeftContent is not null, preferences.Width);
+        SetOutlineColumn(columns[OutlineRightColumn], _viewModel.OutlineRightContent is not null, preferences.Width);
+        AttachOutline(_viewModel.Outline);
+    }
+
+    private static void SetOutlineColumn(ColumnDefinition column, bool visible, double width)
+    {
+        column.MinWidth = visible ? OutlinePreferences.MinWidth : 0;
+        column.Width = visible ? new GridLength(OutlinePreferences.NormalizeWidth(width)) : new GridLength(0);
+    }
+
+    private void OnOutlineSplitterDragCompleted(object? sender, VectorEventArgs e)
+    {
+        if (SidebarLayout is not { ColumnDefinitions: { Count: > OutlineRightColumn } columns })
+        {
+            return;
+        }
+
+        var column = ReferenceEquals(sender, OutlineRightSplitter)
+            ? columns[OutlineRightColumn]
+            : columns[OutlineLeftColumn];
+        _viewModel.SetOutlineWidth(column.Width.Value);
+    }
+
+    private void AttachOutline(OutlineViewModel? outline)
+    {
+        if (ReferenceEquals(outline, _attachedOutline))
+        {
+            return;
+        }
+
+        if (_attachedOutline is not null)
+        {
+            _attachedOutline.NavigateRequested -= OnOutlineNavigateRequested;
+        }
+
+        _attachedOutline = outline;
+        if (outline is null)
+        {
+            DetachOutlineHost();
+            return;
+        }
+
+        outline.NavigateRequested += OnOutlineNavigateRequested;
+        ScheduleOutlineHostRefresh();
+    }
+
+    private void OnOutlineNavigateRequested(object? sender, int sourceLine)
+    {
+        var host = ResolveOutlineHost();
+        if (host is null)
+        {
+            return;
+        }
+
+        host.TryNavigateToSourceLine(sourceLine);
+        _attachedOutline?.SetCurrentSourceLine(host.CurrentSourceLine);
+    }
+
+    /// <summary>
+    /// Хост меняется при переключении viewer и editor; шаблон нового контента создаётся
+    /// позже смены свойства, поэтому поиск откладывается до следующего прохода диспетчера.
+    /// </summary>
+    private void ScheduleOutlineHostRefresh()
+    {
+        if (_attachedOutline is null || _outlineHostRefreshScheduled)
+        {
+            return;
+        }
+
+        _outlineHostRefreshScheduled = true;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _outlineHostRefreshScheduled = false;
+                DetachOutlineHost();
+                if (_attachedOutline is not null && ResolveOutlineHost() is { } host)
+                {
+                    _attachedOutline.SetCurrentSourceLine(host.CurrentSourceLine);
+                }
+            },
+            DispatcherPriority.Loaded);
+    }
+
+    private IOutlineNavigationHost? ResolveOutlineHost()
+    {
+        if (_outlineHost is Visual cached && cached.IsAttachedToVisualTree())
+        {
+            return _outlineHost;
+        }
+
+        DetachOutlineHost();
+
+        _outlineHost = this.FindControl<Panel>("BodyPanel")?
+            .GetVisualDescendants()
+            .OfType<IOutlineNavigationHost>()
+            .FirstOrDefault();
+        if (_outlineHost is not null)
+        {
+            _outlineHost.CurrentSourceLineChanged += OnOutlineHostLineChanged;
+        }
+
+        return _outlineHost;
+    }
+
+    private void DetachOutlineHost()
+    {
+        if (_outlineHost is null)
+        {
+            return;
+        }
+
+        _outlineHost.CurrentSourceLineChanged -= OnOutlineHostLineChanged;
+        _outlineHost = null;
+    }
+
+    private void OnOutlineHostLineChanged(object? sender, EventArgs e)
+        => _attachedOutline?.SetCurrentSourceLine(_outlineHost?.CurrentSourceLine);
+}

@@ -380,6 +380,18 @@ public partial class ViewerView : UserControl, IFindHost, IOutlineNavigationHost
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ShellViewModel.HidesMinimapForOutline))
+        {
+            UpdateMinimapVisibility();
+            if (_hasRenderedDocument)
+            {
+                // Перестройка либо уберёт миникарту (панель справа), либо вернёт её, если её успели снять.
+                QueueMinimapBuild();
+            }
+
+            return;
+        }
+
         if (e.PropertyName != nameof(ShellViewModel.ReadingPreferences))
         {
             return;
@@ -534,6 +546,11 @@ public partial class ViewerView : UserControl, IFindHost, IOutlineNavigationHost
     private bool ShouldShowMinimap()
     {
         if (_scroll is null)
+        {
+            return false;
+        }
+
+        if (DataContext is ShellViewModel { HidesMinimapForOutline: true })
         {
             return false;
         }

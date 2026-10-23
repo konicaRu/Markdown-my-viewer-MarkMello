@@ -65,6 +65,32 @@ public sealed partial class ShellViewModelTests
     }
 
     [Fact]
+    public async Task FloatingChromeGroupFollowsMenuAndOutlineButtons()
+    {
+        var harness = CreateHarness();
+        var shell = harness.ViewModel;
+        var path = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "chrome-group.md");
+        harness.Loader.Sources[path] = CreateSource(path, "# Title" + Environment.NewLine + Environment.NewLine + "text");
+        var raised = new List<string?>();
+        shell.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        await shell.OpenPathAsync(path);
+
+        Assert.True(shell.ShowsFloatingAppMenuButton);
+        Assert.True(shell.ShowsFloatingOutlineButton);
+        Assert.True(shell.ShowsFloatingChromeGroup);
+        Assert.Contains(nameof(ShellViewModel.ShowsFloatingChromeGroup), raised);
+
+        raised.Clear();
+        shell.ToggleEditModeCommand.Execute(null);
+
+        Assert.False(shell.ShowsFloatingAppMenuButton);
+        Assert.False(shell.ShowsFloatingOutlineButton);
+        Assert.False(shell.ShowsFloatingChromeGroup);
+        Assert.Contains(nameof(ShellViewModel.ShowsFloatingChromeGroup), raised);
+    }
+
+    [Fact]
     public void SetOutlineWidthNormalizes()
     {
         var shell = CreateHarness().ViewModel;

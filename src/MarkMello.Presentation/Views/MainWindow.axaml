@@ -35,6 +35,8 @@
     <KeyBinding Gesture="Cmd+Shift+O" Command="{Binding OpenFolderCommand}" />
     <KeyBinding Gesture="Ctrl+B" Command="{Binding ToggleSidebarCommand}" />
     <KeyBinding Gesture="Cmd+B" Command="{Binding ToggleSidebarCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+B" Command="{Binding ToggleOutlineCommand}" />
+    <KeyBinding Gesture="Cmd+Shift+B" Command="{Binding ToggleOutlineCommand}" />
     <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseActiveTabCommand}" />
     <KeyBinding Gesture="Cmd+W" Command="{Binding CloseActiveTabCommand}" />
     <KeyBinding Gesture="Ctrl+Tab" Command="{Binding ActivateNextTabCommand}" />
@@ -237,7 +239,11 @@
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" MinWidth="0" MaxWidth="340" />
           <ColumnDefinition Width="0" />
+          <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
+          <ColumnDefinition Width="0" />
           <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="0" />
+          <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
         </Grid.ColumnDefinitions>
 
         <!-- ContentControl, а не сам контрол: в single-file режиме сайдбара не должно
@@ -260,7 +266,29 @@
                       ResizeBehavior="PreviousAndNext"
                       ResizeDirection="Columns" />
 
-      <Grid Grid.Column="2"
+        <!-- Оглавление (ADR-0008): колонки 2 и 6, активна одна из двух по стороне. -->
+        <ContentControl Grid.Column="2" Content="{Binding OutlineLeftContent}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:OutlineViewModel">
+              <Border Background="{DynamicResource MmSurfaceBrush}"
+                      BorderBrush="{DynamicResource MmBorderBrush}"
+                      BorderThickness="0,0,1,0">
+                <views:OutlinePanelView DataContext="{Binding $parent[Window].DataContext}" />
+              </Border>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <GridSplitter Grid.Column="3"
+                      Name="OutlineLeftSplitter"
+                      Classes="mm-sidebar-splitter"
+                      ZIndex="1"
+                      IsVisible="{Binding OutlineLeftContent, Converter={x:Static ObjectConverters.IsNotNull}}"
+                      DragCompleted="OnOutlineSplitterDragCompleted"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Columns" />
+
+      <Grid Grid.Column="4"
             RowDefinitions="Auto,*">
 
         <ContentControl Grid.Row="0"
@@ -295,10 +323,11 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="16,12,0,0"
-                IsVisible="{Binding ShowsFloatingAppMenuButton}">
+                IsVisible="{Binding ShowsFloatingChromeGroup}">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <ToggleButton Name="AppMenuTriggerButton"
                           Classes="topbar-ghost"
+                          IsVisible="{Binding ShowsFloatingAppMenuButton}"
                           IsChecked="{Binding IsAppOverlayOpen, Mode=OneWay}"
                           Command="{Binding ToggleAppMenuCommand}"
                           ToolTip.Tip="{Binding AppMenuTooltip}">
@@ -329,6 +358,21 @@
                       Fill="Transparent" />
               </Grid>
             </Button>
+
+            <ToggleButton Classes="topbar-ghost"
+                          IsVisible="{Binding ShowsFloatingOutlineButton}"
+                          IsChecked="{Binding IsOutlineToggleChecked, Mode=OneWay}"
+                          Command="{Binding ToggleOutlineCommand}"
+                          ToolTip.Tip="{Binding OutlineToggleTooltip}">
+              <Grid Width="14"
+                    Height="14">
+                <Path Data="M2 3.5H12 M4.5 7H12 M7 10.5H12"
+                      Stroke="{DynamicResource MmTextSoftBrush}"
+                      StrokeThickness="1.5"
+                      StrokeLineCap="Round"
+                      Fill="Transparent" />
+              </Grid>
+            </ToggleButton>
           </StackPanel>
         </Border>
 
@@ -716,6 +760,27 @@
       </Panel>
 
       </Grid>
+
+        <GridSplitter Grid.Column="5"
+                      Name="OutlineRightSplitter"
+                      Classes="mm-sidebar-splitter mm-splitter-right"
+                      ZIndex="1"
+                      IsVisible="{Binding OutlineRightContent, Converter={x:Static ObjectConverters.IsNotNull}}"
+                      DragCompleted="OnOutlineSplitterDragCompleted"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Columns" />
+
+        <ContentControl Grid.Column="6" Content="{Binding OutlineRightContent}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:OutlineViewModel">
+              <Border Background="{DynamicResource MmSurfaceBrush}"
+                      BorderBrush="{DynamicResource MmBorderBrush}"
+                      BorderThickness="1,0,0,0">
+                <views:OutlinePanelView DataContext="{Binding $parent[Window].DataContext}" />
+              </Border>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
 
       </Grid>
 
