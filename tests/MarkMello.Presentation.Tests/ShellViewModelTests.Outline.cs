@@ -102,6 +102,16 @@ public sealed partial class ShellViewModelTests
     }
 
     [Fact]
+    public void SetOutlineWidthKeepsWidthInsideRange()
+    {
+        var shell = CreateHarness().ViewModel;
+
+        shell.SetOutlineWidth(500);
+
+        Assert.Equal(500, shell.OutlinePreferences.Width);
+    }
+
+    [Fact]
     public async Task ReshowingOutlineRebuildsItFromTheCurrentDocument()
     {
         var harness = CreateHarness();

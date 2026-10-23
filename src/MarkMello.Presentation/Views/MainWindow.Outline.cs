@@ -58,6 +58,7 @@ public partial class MainWindow
     private static void SetOutlineColumn(ColumnDefinition column, bool visible, double width)
     {
         column.MinWidth = visible ? OutlinePreferences.MinWidth : 0;
+        column.MaxWidth = OutlinePreferences.MaxWidth;
         column.Width = visible ? new GridLength(OutlinePreferences.NormalizeWidth(width)) : new GridLength(0);
     }
 

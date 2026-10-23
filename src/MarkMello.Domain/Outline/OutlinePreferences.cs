@@ -27,7 +27,7 @@ public sealed record OutlinePreferences(
     public const int MinFontSize = 11;
     public const int MaxFontSize = 20;
     public const double MinWidth = 220;
-    public const double MaxWidth = 340;
+    public const double MaxWidth = 600;
     public const double DefaultWidth = 260;
 
     public static OutlinePreferences Default { get; } = new();

@@ -241,7 +241,7 @@
           <ColumnDefinition Width="0" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="0" />
-          <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
+          <ColumnDefinition Width="0" MinWidth="0" />
         </Grid.ColumnDefinitions>
 
         <!-- ContentControl, а не сам контрол: в single-file режиме сайдбара не должно
@@ -266,7 +266,7 @@
 
         <Grid Grid.Column="2" Name="OutlineLeftLayout">
           <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
+            <ColumnDefinition Width="0" MinWidth="0" />
             <ColumnDefinition Width="0" />
             <ColumnDefinition Width="*" />
           </Grid.ColumnDefinitions>

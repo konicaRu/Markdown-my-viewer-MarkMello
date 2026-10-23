@@ -95,12 +95,46 @@ public sealed class MainWindowSplitterTests(AvaloniaHeadlessFixture fixture)
             Drag(OutlineSplitter(window, side), window, delta);
 
             Assert.Equal(before + effect, outline.ActualWidth, 1);
-            Assert.InRange(outline.Width.Value, OutlinePreferences.MinWidth, 340);
+            Assert.InRange(outline.Width.Value, OutlinePreferences.MinWidth, OutlinePreferences.MaxWidth);
             Assert.Equal(outline.Width.Value, shell.OutlinePreferences.Width, 1);
             Assert.Equal(fileBefore, FileColumn(window).ActualWidth, 1);
         });
 
-    // Узкое окно: файловая панель до 340 и оглавление до 340 оставили бы документу меньше 320.
+    [Theory]
+    [InlineData(OutlinePanelSide.Left)]
+    [InlineData(OutlinePanelSide.Right)]
+    public Task OutlineSplitterGrowsPastFileSidebarMaximum(OutlinePanelSide side)
+        => RunAsync(side, outlineVisible: true, (shell, window) =>
+        {
+            var outline = OutlineColumn(window, side);
+            var delta = side == OutlinePanelSide.Left ? 300d : -300d;
+
+            Drag(OutlineSplitter(window, side), window, delta);
+
+            Assert.True(outline.Width.Value > 340, $"column {outline.Width.Value}");
+            Assert.InRange(outline.Width.Value, 341, OutlinePreferences.MaxWidth);
+            Assert.True(shell.OutlinePreferences.Width > 340, $"pref {shell.OutlinePreferences.Width}");
+            Assert.InRange(shell.OutlinePreferences.Width, 341, OutlinePreferences.MaxWidth);
+        }, WideWindowWidth);
+
+    [Theory]
+    [InlineData(OutlinePanelSide.Left)]
+    [InlineData(OutlinePanelSide.Right)]
+    public Task OutlineSplitterClampsAtOutlineMaximum(OutlinePanelSide side)
+        => RunAsync(side, outlineVisible: true, (shell, window) =>
+        {
+            var outline = OutlineColumn(window, side);
+            var delta = side == OutlinePanelSide.Left ? 800d : -800d;
+
+            Drag(OutlineSplitter(window, side), window, delta);
+
+            Assert.Equal(OutlinePreferences.MaxWidth, outline.Width.Value, 1);
+            Assert.Equal(OutlinePreferences.MaxWidth, shell.OutlinePreferences.Width, 1);
+        }, WideWindowWidth);
+
+    private const double WideWindowWidth = 1600;
+
+    // Узкое окно: файловая панель до 340 и оглавление до 600 оставили бы документу меньше 320.
     private const double NarrowWindowWidth = 900;
     private const double DocumentMinWidth = 320;
 

@@ -23,6 +23,15 @@ public sealed class OutlinePreferencesTests
     public void NormalizeReturnsDefaultForNull()
         => Assert.Equal(OutlinePreferences.Default, OutlinePreferences.Normalize(null));
 
+    [Theory]
+    [InlineData(5000, 600)]
+    [InlineData(601, 600)]
+    [InlineData(500, 500)]
+    [InlineData(600, 600)]
+    [InlineData(100, 220)]
+    public void NormalizeClampsWidthToRange(double width, double expected)
+        => Assert.Equal(expected, OutlinePreferences.Normalize(OutlinePreferences.Default with { Width = width }).Width);
+
     [Fact]
     public void NormalizeClampsEveryValue()
     {
