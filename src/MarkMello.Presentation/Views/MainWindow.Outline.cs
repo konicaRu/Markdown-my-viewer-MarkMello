@@ -14,8 +14,11 @@ namespace MarkMello.Presentation.Views;
 /// </summary>
 public partial class MainWindow
 {
-    private const int OutlineLeftColumn = 2;
-    private const int OutlineRightColumn = 6;
+    // Правая колонка живёт в SidebarLayout (колонки: 0 файлы, 1 граница, 2 документ, 3 граница, 4 оглавление),
+    // левая вложена в колонку документа (OutlineLeftLayout: 0 оглавление, 1 граница, 2 документ),
+    // чтобы граница файлового сайдбара по-прежнему соседствовала с колонкой документа.
+    private const int OutlineRightColumn = 4;
+    private const int OutlineLeftColumn = 0;
 
     private OutlineViewModel? _attachedOutline;
     private IOutlineNavigationHost? _outlineHost;
@@ -23,13 +26,14 @@ public partial class MainWindow
 
     private void SyncOutlineColumns()
     {
-        if (SidebarLayout is not { ColumnDefinitions: { Count: > OutlineRightColumn } columns })
+        if (SidebarLayout is not { ColumnDefinitions: { Count: > OutlineRightColumn } columns }
+            || OutlineLeftLayout is not { ColumnDefinitions: { Count: > OutlineLeftColumn } leftColumns })
         {
             return;
         }
 
         var preferences = _viewModel.OutlinePreferences;
-        SetOutlineColumn(columns[OutlineLeftColumn], _viewModel.OutlineLeftContent is not null, preferences.Width);
+        SetOutlineColumn(leftColumns[OutlineLeftColumn], _viewModel.OutlineLeftContent is not null, preferences.Width);
         SetOutlineColumn(columns[OutlineRightColumn], _viewModel.OutlineRightContent is not null, preferences.Width);
         AttachOutline(_viewModel.Outline);
     }
@@ -42,14 +46,15 @@ public partial class MainWindow
 
     private void OnOutlineSplitterDragCompleted(object? sender, VectorEventArgs e)
     {
-        if (SidebarLayout is not { ColumnDefinitions: { Count: > OutlineRightColumn } columns })
+        if (SidebarLayout is not { ColumnDefinitions: { Count: > OutlineRightColumn } columns }
+            || OutlineLeftLayout is not { ColumnDefinitions: { Count: > OutlineLeftColumn } leftColumns })
         {
             return;
         }
 
         var column = ReferenceEquals(sender, OutlineRightSplitter)
             ? columns[OutlineRightColumn]
-            : columns[OutlineLeftColumn];
+            : leftColumns[OutlineLeftColumn];
         _viewModel.SetOutlineWidth(column.Width.Value);
     }
 

@@ -239,8 +239,6 @@
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" MinWidth="0" MaxWidth="340" />
           <ColumnDefinition Width="0" />
-          <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
-          <ColumnDefinition Width="0" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="0" />
           <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
@@ -266,8 +264,14 @@
                       ResizeBehavior="PreviousAndNext"
                       ResizeDirection="Columns" />
 
-        <!-- Оглавление (ADR-0008): колонки 2 и 6, активна одна из двух по стороне. -->
-        <ContentControl Grid.Column="2" Content="{Binding OutlineLeftContent}">
+        <Grid Grid.Column="2" Name="OutlineLeftLayout">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0" MinWidth="0" MaxWidth="340" />
+            <ColumnDefinition Width="0" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+        <!-- Оглавление (ADR-0008): слева вложенная колонка 0 в OutlineLeftLayout, справа колонка 4; активна одна из двух по стороне. -->
+        <ContentControl Grid.Column="0" Content="{Binding OutlineLeftContent}">
           <ContentControl.ContentTemplate>
             <DataTemplate x:DataType="vm:OutlineViewModel">
               <Border Background="{DynamicResource MmSurfaceBrush}"
@@ -279,7 +283,7 @@
           </ContentControl.ContentTemplate>
         </ContentControl>
 
-        <GridSplitter Grid.Column="3"
+        <GridSplitter Grid.Column="1"
                       Name="OutlineLeftSplitter"
                       Classes="mm-sidebar-splitter"
                       ZIndex="1"
@@ -288,7 +292,7 @@
                       ResizeBehavior="PreviousAndNext"
                       ResizeDirection="Columns" />
 
-      <Grid Grid.Column="4"
+      <Grid Grid.Column="2"
             RowDefinitions="Auto,*">
 
         <ContentControl Grid.Row="0"
@@ -760,8 +764,9 @@
       </Panel>
 
       </Grid>
+      </Grid>
 
-        <GridSplitter Grid.Column="5"
+        <GridSplitter Grid.Column="3"
                       Name="OutlineRightSplitter"
                       Classes="mm-sidebar-splitter mm-splitter-right"
                       ZIndex="1"
@@ -770,7 +775,7 @@
                       ResizeBehavior="PreviousAndNext"
                       ResizeDirection="Columns" />
 
-        <ContentControl Grid.Column="6" Content="{Binding OutlineRightContent}">
+        <ContentControl Grid.Column="4" Content="{Binding OutlineRightContent}">
           <ContentControl.ContentTemplate>
             <DataTemplate x:DataType="vm:OutlineViewModel">
               <Border Background="{DynamicResource MmSurfaceBrush}"

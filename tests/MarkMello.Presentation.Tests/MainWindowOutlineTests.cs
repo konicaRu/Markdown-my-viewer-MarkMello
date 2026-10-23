@@ -13,8 +13,8 @@ namespace MarkMello.Presentation.Tests;
 public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
 {
     private const int FileColumn = 0;
-    private const int OutlineLeftColumn = 2;
-    private const int OutlineRightColumn = 6;
+    private const int OutlineLeftColumn = 0;
+    private const int OutlineRightColumn = 4;
 
     [Fact]
     public Task HiddenPanelKeepsOutlineColumnsCollapsedAndFileColumnUntouched()
@@ -22,9 +22,11 @@ public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
         return RunWithWindowAsync(outlineVisible: false, (shell, window) =>
         {
             var columns = GetColumns(window);
+            var left = GetLeftColumns(window);
 
-            Assert.Equal(7, columns.Count);
-            AssertCollapsed(columns[OutlineLeftColumn]);
+            Assert.Equal(5, columns.Count);
+            Assert.Equal(3, left.Count);
+            AssertCollapsed(left[OutlineLeftColumn]);
             AssertCollapsed(columns[OutlineRightColumn]);
 
             var (minWidth, width) = MainWindow.CalculateSidebarColumn(shell.ShowsSidebar, shell.SidebarWidth);
@@ -46,9 +48,10 @@ public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
             };
 
             var columns = GetColumns(window);
-            Assert.Equal(300d, columns[OutlineLeftColumn].Width.Value);
-            Assert.True(columns[OutlineLeftColumn].Width.IsAbsolute);
-            Assert.Equal(OutlinePreferences.MinWidth, columns[OutlineLeftColumn].MinWidth);
+            var left = GetLeftColumns(window);
+            Assert.Equal(300d, left[OutlineLeftColumn].Width.Value);
+            Assert.True(left[OutlineLeftColumn].Width.IsAbsolute);
+            Assert.Equal(OutlinePreferences.MinWidth, left[OutlineLeftColumn].MinWidth);
             AssertCollapsed(columns[OutlineRightColumn]);
         });
     }
@@ -66,9 +69,10 @@ public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
             };
 
             var columns = GetColumns(window);
+            var left = GetLeftColumns(window);
             Assert.Equal(260d, columns[OutlineRightColumn].Width.Value);
             Assert.Equal(OutlinePreferences.MinWidth, columns[OutlineRightColumn].MinWidth);
-            AssertCollapsed(columns[OutlineLeftColumn]);
+            AssertCollapsed(left[OutlineLeftColumn]);
         });
     }
 
@@ -78,16 +82,17 @@ public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
         return RunWithWindowAsync(outlineVisible: false, (shell, window) =>
         {
             var columns = GetColumns(window);
-            AssertCollapsed(columns[OutlineLeftColumn]);
+            var left = GetLeftColumns(window);
+            AssertCollapsed(left[OutlineLeftColumn]);
 
             shell.ToggleOutlineCommand.Execute(null);
 
-            Assert.Equal(shell.OutlinePreferences.Width, columns[OutlineLeftColumn].Width.Value);
-            Assert.Equal(OutlinePreferences.MinWidth, columns[OutlineLeftColumn].MinWidth);
+            Assert.Equal(shell.OutlinePreferences.Width, left[OutlineLeftColumn].Width.Value);
+            Assert.Equal(OutlinePreferences.MinWidth, left[OutlineLeftColumn].MinWidth);
 
             shell.ToggleOutlineCommand.Execute(null);
 
-            AssertCollapsed(columns[OutlineLeftColumn]);
+            AssertCollapsed(left[OutlineLeftColumn]);
             AssertCollapsed(columns[OutlineRightColumn]);
         });
     }
@@ -97,7 +102,9 @@ public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
     {
         return RunWithWindowAsync(outlineVisible: true, (shell, window) =>
         {
-            Assert.NotNull(window.GetVisualDescendants().OfType<OutlinePanelView>().SingleOrDefault());
+            var leftPanel = window.GetVisualDescendants().OfType<OutlinePanelView>().SingleOrDefault();
+            Assert.NotNull(leftPanel);
+            Assert.Contains(leftPanel.GetVisualAncestors(), a => a is Grid { Name: "OutlineLeftLayout" });
 
             shell.OutlinePreferences = shell.OutlinePreferences with { Side = OutlinePanelSide.Right };
             var panel = window.GetVisualDescendants().OfType<OutlinePanelView>().Single();
@@ -175,6 +182,9 @@ public sealed class MainWindowOutlineTests(AvaloniaHeadlessFixture fixture)
 
     private static ColumnDefinitions GetColumns(MainWindow window)
         => window.FindControl<Grid>("SidebarLayout")!.ColumnDefinitions;
+
+    private static ColumnDefinitions GetLeftColumns(MainWindow window)
+        => window.FindControl<Grid>("OutlineLeftLayout")!.ColumnDefinitions;
 
     private static void AssertCollapsed(ColumnDefinition column)
     {
