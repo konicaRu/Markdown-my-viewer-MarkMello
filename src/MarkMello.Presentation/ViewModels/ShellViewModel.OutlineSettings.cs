@@ -8,7 +8,7 @@ public partial class ShellViewModel
     private IReadOnlyList<OutlineLevelSetting>? _outlineLevelSettings;
 
     public IReadOnlyList<OutlineLevelSetting> OutlineLevelSettings => _outlineLevelSettings ??=
-        Enumerable.Range(OutlinePreferences.MinLevel, OutlinePreferences.MaxLevelLimit)
+        Enumerable.Range(OutlinePreferences.MinLevel, OutlinePreferences.MaxLevelLimit - OutlinePreferences.MinLevel + 1)
             .Select(level => new OutlineLevelSetting(level, () => OutlinePreferences, ApplyOutlinePreferences))
             .ToArray();
 

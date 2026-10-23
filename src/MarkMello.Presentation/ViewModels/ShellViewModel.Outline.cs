@@ -84,7 +84,13 @@ public partial class ShellViewModel
 
     partial void OnOutlinePreferencesChanged(OutlinePreferences? oldValue, OutlinePreferences newValue)
     {
-        RaiseOutlineLayoutProperties();
+        // Layout-свойства пересобирают минимапу во ViewerView: поднимаем их только при смене
+        // видимости/стороны, а не на каждый шаг размера шрифта или интервала.
+        if (oldValue is null || oldValue.IsVisible != newValue.IsVisible || oldValue.Side != newValue.Side)
+        {
+            RaiseOutlineLayoutProperties();
+        }
+
         RefreshOutlineSettingsProperties();
 
         if (_outline is null)
@@ -93,7 +99,9 @@ public partial class ShellViewModel
             return;
         }
 
-        if (oldValue?.MaxLevel != newValue.MaxLevel)
+        // Пока панель скрыта, RefreshOutlineSource ничего не делает, поэтому при повторном показе
+        // дерево нужно пересобрать: документ или вкладка могли смениться.
+        if (oldValue?.IsVisible != newValue.IsVisible || oldValue?.MaxLevel != newValue.MaxLevel)
         {
             RefreshOutlineSource();
         }

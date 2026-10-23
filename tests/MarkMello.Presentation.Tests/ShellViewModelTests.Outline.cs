@@ -1,3 +1,4 @@
+using MarkMello.Application.Abstractions;
 using MarkMello.Domain;
 using MarkMello.Presentation.ViewModels;
 
@@ -98,6 +99,89 @@ public sealed partial class ShellViewModelTests
         shell.SetOutlineWidth(999);
 
         Assert.Equal(OutlinePreferences.MaxWidth, shell.OutlinePreferences.Width);
+    }
+
+    [Fact]
+    public async Task ReshowingOutlineRebuildsItFromTheCurrentDocument()
+    {
+        var harness = CreateHarness();
+        var shell = harness.ViewModel;
+        var path = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "reshow-outline.md");
+        harness.Loader.Sources[path] = CreateSource(path, "# One\n\n# Two\n\ntext");
+        await shell.OpenPathAsync(path);
+        shell.RenderedDocument = WithHeadings();
+        shell.OutlinePreferences = OutlinePreferences.Default with { IsVisible = true };
+        Assert.Equal(["One", "Two"], shell.Outline!.Items.Select(i => i.Text));
+
+        shell.OutlinePreferences = shell.OutlinePreferences with { IsVisible = false };
+        shell.RenderedDocument = new RenderedMarkdownDocument(
+        [
+            new MarkdownHeadingBlock(1, [new MarkdownTextInline("Other")]) { SourceSpan = new MarkdownSourceSpan(0) }
+        ]);
+        shell.OutlinePreferences = shell.OutlinePreferences with { IsVisible = true };
+
+        Assert.Equal(["Other"], shell.Outline!.Items.Select(i => i.Text));
+    }
+
+    [Fact]
+    public async Task ReshowingOutlineInEditModeUsesTheEditorPreview()
+    {
+        var harness = CreateHarness(renderer: new HeadingLineMarkdownRenderer());
+        var shell = harness.ViewModel;
+        var path = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "reshow-outline-edit.md");
+        harness.Loader.Sources[path] = CreateSource(path, "# One");
+        await shell.OpenPathAsync(path);
+        shell.OutlinePreferences = OutlinePreferences.Default with { IsVisible = true };
+        shell.ToggleEditModeCommand.Execute(null);
+        Assert.Equal(["One"], shell.Outline!.Items.Select(i => i.Text));
+        shell.OutlinePreferences = shell.OutlinePreferences with { IsVisible = false };
+
+        shell.EditorSession!.SourceText = "# Edited";
+        shell.OutlinePreferences = shell.OutlinePreferences with { IsVisible = true };
+
+        Assert.True(shell.IsEditMode);
+        Assert.Equal(["Edited"], shell.Outline!.Items.Select(i => i.Text));
+    }
+
+    private sealed class HeadingLineMarkdownRenderer : IMarkdownDocumentRenderer
+    {
+        public RenderedMarkdownDocument Render(string markdown) => Render(markdown, null);
+
+        public RenderedMarkdownDocument Render(string markdown, string? baseDirectory)
+            => new(markdown.Split('\n')
+                .Select((line, index) => (line, index))
+                .Where(x => x.line.StartsWith("# ", StringComparison.Ordinal))
+                .Select(x => (MarkdownBlock)new MarkdownHeadingBlock(1, [new MarkdownTextInline(x.line[2..])])
+                {
+                    SourceSpan = new MarkdownSourceSpan(x.index)
+                })
+                .ToArray());
+    }
+
+    [Fact]
+    public async Task TypographyChangesDoNotRaiseOutlineLayoutProperties()
+    {
+        var shell = await CreateOutlineTestShellAsync(withHeadings: true, outlineVisible: true);
+        var raised = new List<string?>();
+        shell.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        string[] layout =
+        [
+            nameof(ShellViewModel.ShowsOutline), nameof(ShellViewModel.OutlineLeftContent),
+            nameof(ShellViewModel.OutlineRightContent), nameof(ShellViewModel.HidesMinimapForOutline)
+        ];
+
+        shell.OutlineLevelSettings[1].IncreaseFontSizeCommand.Execute(null);
+        shell.IncreaseOutlineLineHeightCommand.Execute(null);
+
+        Assert.DoesNotContain(raised, name => layout.Contains(name));
+
+        shell.IsOutlineRightSelected = true;
+        Assert.Contains(nameof(ShellViewModel.HidesMinimapForOutline), raised);
+
+        raised.Clear();
+        shell.ToggleOutlineCommand.Execute(null);
+        Assert.Contains(nameof(ShellViewModel.ShowsOutline), raised);
+        Assert.Contains(nameof(ShellViewModel.HidesMinimapForOutline), raised);
     }
 
     internal static async Task<ShellViewModel> CreateOutlineTestShellAsync(bool withHeadings, bool outlineVisible)
