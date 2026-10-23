@@ -74,6 +74,17 @@ public sealed partial class ShellViewModelTests
         Assert.Equal(OutlinePreferences.MaxWidth, shell.OutlinePreferences.Width);
     }
 
+    internal static async Task<ShellViewModel> CreateOutlineTestShellAsync(bool withHeadings, bool outlineVisible)
+    {
+        var harness = CreateHarness();
+        var path = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "outline-view.md");
+        harness.Loader.Sources[path] = CreateSource(path, "# One\n\n# Two\n\ntext");
+        await harness.ViewModel.OpenPathAsync(path);
+        harness.ViewModel.RenderedDocument = withHeadings ? WithHeadings() : new RenderedMarkdownDocument([]);
+        harness.ViewModel.OutlinePreferences = OutlinePreferences.Default with { IsVisible = outlineVisible };
+        return harness.ViewModel;
+    }
+
     private static RenderedMarkdownDocument WithHeadings()
         => new(
         [
