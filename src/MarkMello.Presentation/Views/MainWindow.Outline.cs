@@ -19,6 +19,11 @@ public partial class MainWindow
     // чтобы граница файлового сайдбара по-прежнему соседствовала с колонкой документа.
     private const int OutlineRightColumn = 4;
     private const int OutlineLeftColumn = 0;
+    private const int OutlineDocumentColumn = 2;
+    private const int SidebarDocumentColumn = 2;
+
+    /// <summary>Пока оглавление видно, колонка документа не уже этого значения (решение владельца, ADR-0008).</summary>
+    private const double DocumentMinWidth = 320;
 
     private OutlineViewModel? _attachedOutline;
     private IOutlineNavigationHost? _outlineHost;
@@ -33,8 +38,20 @@ public partial class MainWindow
         }
 
         var preferences = _viewModel.OutlinePreferences;
-        SetOutlineColumn(leftColumns[OutlineLeftColumn], _viewModel.OutlineLeftContent is not null, preferences.Width);
-        SetOutlineColumn(columns[OutlineRightColumn], _viewModel.OutlineRightContent is not null, preferences.Width);
+        var leftVisible = _viewModel.OutlineLeftContent is not null;
+        var rightVisible = _viewModel.OutlineRightContent is not null;
+        SetOutlineColumn(leftColumns[OutlineLeftColumn], leftVisible, preferences.Width);
+        SetOutlineColumn(columns[OutlineRightColumn], rightVisible, preferences.Width);
+
+        // Охрана от схлопывания документа: обе границы файлов и правого оглавления двигают
+        // верхнюю колонку 2, поэтому ей нужен запас под левое оглавление плюс документ.
+        if (leftColumns.Count > OutlineDocumentColumn && columns.Count > SidebarDocumentColumn)
+        {
+            leftColumns[OutlineDocumentColumn].MinWidth = leftVisible ? DocumentMinWidth : 0;
+            columns[SidebarDocumentColumn].MinWidth = leftVisible || rightVisible
+                ? DocumentMinWidth + (leftVisible ? OutlinePreferences.NormalizeWidth(preferences.Width) : 0)
+                : 0;
+        }
         AttachOutline(_viewModel.Outline);
     }
 

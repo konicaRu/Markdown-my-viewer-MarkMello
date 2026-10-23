@@ -100,7 +100,62 @@ public sealed class MainWindowSplitterTests(AvaloniaHeadlessFixture fixture)
             Assert.Equal(fileBefore, FileColumn(window).ActualWidth, 1);
         });
 
-    private Task RunAsync(OutlinePanelSide side, bool outlineVisible, Action<ShellViewModel, MainWindow> body)
+    // Узкое окно: файловая панель до 340 и оглавление до 340 оставили бы документу меньше 320.
+    private const double NarrowWindowWidth = 900;
+    private const double DocumentMinWidth = 320;
+
+    [Fact]
+    public Task FileSplitterKeepsDocumentWideWithLeftOutline()
+        => RunAsync(OutlinePanelSide.Left, outlineVisible: true, (shell, window) =>
+        {
+            var outlineBefore = OutlineColumn(window, OutlinePanelSide.Left).ActualWidth;
+
+            Drag(FileSplitter(window), window, 1000);
+
+            Assert.True(NestedDocumentColumn(window).ActualWidth >= DocumentMinWidth - 1, $"document {NestedDocumentColumn(window).ActualWidth}");
+            Assert.True(DocumentArea(window).Bounds.Width >= DocumentMinWidth - 1, $"area {DocumentArea(window).Bounds.Width}");
+            Assert.Equal(outlineBefore, OutlineColumn(window, OutlinePanelSide.Left).ActualWidth, 1);
+        }, NarrowWindowWidth);
+
+    [Fact]
+    public Task RightOutlineSplitterKeepsDocumentWide()
+        => RunAsync(OutlinePanelSide.Right, outlineVisible: true, (shell, window) =>
+        {
+            Drag(OutlineSplitter(window, OutlinePanelSide.Right), window, -1000);
+
+            Assert.True(DocumentArea(window).Bounds.Width >= DocumentMinWidth - 1, $"area {DocumentArea(window).Bounds.Width}");
+        }, NarrowWindowWidth);
+
+    [Fact]
+    public Task LeftOutlineSplitterKeepsDocumentWide()
+        => RunAsync(OutlinePanelSide.Left, outlineVisible: true, (shell, window) =>
+        {
+            Drag(OutlineSplitter(window, OutlinePanelSide.Left), window, 1000);
+
+            Assert.True(DocumentArea(window).Bounds.Width >= DocumentMinWidth - 1, $"area {DocumentArea(window).Bounds.Width}");
+        }, NarrowWindowWidth);
+
+    [Theory]
+    [InlineData(OutlinePanelSide.Left, true, 320d, 320d + 280d)]
+    [InlineData(OutlinePanelSide.Right, true, 0d, 320d)]
+    [InlineData(OutlinePanelSide.Left, false, 0d, 0d)]
+    [InlineData(OutlinePanelSide.Right, false, 0d, 0d)]
+    public Task DocumentColumnsMinWidthFollowsOutline(OutlinePanelSide side, bool visible, double nested, double top)
+        => RunAsync(side, visible, (shell, window) =>
+        {
+            Assert.Equal(nested, NestedDocumentColumn(window).MinWidth);
+            Assert.Equal(top, SidebarLayout(window).ColumnDefinitions[2].MinWidth);
+
+            shell.OutlinePreferences = shell.OutlinePreferences with { IsVisible = false };
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0d, NestedDocumentColumn(window).MinWidth);
+            Assert.Equal(0d, SidebarLayout(window).ColumnDefinitions[2].MinWidth);
+        });
+
+    private static ColumnDefinition NestedDocumentColumn(MainWindow window)
+        => window.FindControl<Grid>("OutlineLeftLayout")!.ColumnDefinitions[2];
+
+    private Task RunAsync(OutlinePanelSide side, bool outlineVisible, Action<ShellViewModel, MainWindow> body, double? windowWidth = null)
         => fixture.RunAsync(async () =>
         {
             var shell = await CreateWorkspaceShellAsync();
@@ -109,6 +164,11 @@ public sealed class MainWindowSplitterTests(AvaloniaHeadlessFixture fixture)
                 StartupSmokeTestOptions.Disabled,
                 new InMemorySettingsStore(),
                 new RecordingStartupMetrics());
+            if (windowWidth is { } width)
+            {
+                window.Width = width;
+            }
+
             window.Show();
             try
             {
