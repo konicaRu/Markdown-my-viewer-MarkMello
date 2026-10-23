@@ -61,4 +61,28 @@ public sealed class DocumentOutlineRenderingTests
         Assert.Equal("Real", Assert.Single(outline.Items).Text);
         Assert.Empty(outline.Items[0].Children);
     }
+
+    [Fact]
+    public void MultiLineSetextHeadingStartsOnItsFirstTextLine()
+    {
+        var markdown = string.Join("\n", "# Top", "", "First line", "second line", "-----------", "", "tail");
+
+        var document = new MarkdigMarkdownDocumentRenderer().Render(markdown);
+
+        var setext = document.Blocks.OfType<MarkdownHeadingBlock>().Last();
+        Assert.Equal(2, setext.SourceSpan!.Value.StartLine);
+        Assert.Equal(4, setext.SourceSpan.Value.EndLine);
+    }
+
+    [Fact]
+    public void SetextHeadingAfterManyBlankLinesKeepsItsLine()
+    {
+        var markdown = "# Top" + new string('\n', 1) + string.Concat(Enumerable.Repeat("\n", 50)) + "Late heading" + "\n" + "===" + "\n" + "tail";
+
+        var document = new MarkdigMarkdownDocumentRenderer().Render(markdown);
+
+        var setext = document.Blocks.OfType<MarkdownHeadingBlock>().Last();
+        Assert.Equal(51, setext.SourceSpan!.Value.StartLine);
+        Assert.Equal(52, setext.SourceSpan.Value.EndLine);
+    }
 }
