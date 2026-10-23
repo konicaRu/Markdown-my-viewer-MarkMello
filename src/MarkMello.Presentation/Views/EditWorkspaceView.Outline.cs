@@ -8,9 +8,23 @@ public partial class EditWorkspaceView
 {
     private int? _outlineCaretLine;
 
-    public int? CurrentSourceLine => _outlineCaretLine;
+    // Кэш нужен только для подавления повторных событий; значение для чтения считается заново.
+    public int? CurrentSourceLine => _editorTextBox is { } textBox
+        ? GetSourceLineFromCharacterIndex(textBox.Text ?? string.Empty, textBox.CaretIndex)
+        : null;
 
-    public event EventHandler? CurrentSourceLineChanged;
+    private EventHandler? _currentSourceLineChanged;
+
+    public event EventHandler? CurrentSourceLineChanged
+    {
+        add
+        {
+            _currentSourceLineChanged += value;
+            // Новый подписчик читает значение сам; кэш сравнения синхронизируем с ним.
+            _outlineCaretLine = CurrentSourceLine;
+        }
+        remove => _currentSourceLineChanged -= value;
+    }
 
     /// <summary>
     /// Caret to the start of the heading's source line, line scrolled into the
@@ -56,6 +70,12 @@ public partial class EditWorkspaceView
 
     private void UpdateOutlineCaretLine(TextBox textBox)
     {
+        // Rule 1 ADR-0008: без подписчика не считаем строку каретки (O(offset) на каждый шаг).
+        if (_currentSourceLineChanged is null)
+        {
+            return;
+        }
+
         var line = GetSourceLineFromCharacterIndex(textBox.Text ?? string.Empty, textBox.CaretIndex);
         if (line == _outlineCaretLine)
         {
@@ -63,6 +83,6 @@ public partial class EditWorkspaceView
         }
 
         _outlineCaretLine = line;
-        CurrentSourceLineChanged?.Invoke(this, EventArgs.Empty);
+        _currentSourceLineChanged.Invoke(this, EventArgs.Empty);
     }
 }

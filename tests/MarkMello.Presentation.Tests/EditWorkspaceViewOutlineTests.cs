@@ -68,6 +68,32 @@ public sealed class EditWorkspaceViewOutlineTests
     }
 
     [Fact]
+    public Task WithoutSubscribersCaretMovesAreNotTrackedButTheLineIsReadFresh()
+    {
+        return _fixture.Session.Dispatch(() =>
+        {
+            var (view, editor) = CreateAttachedView();
+            var cache = typeof(EditWorkspaceView).GetField(
+                "_outlineCaretLine", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            Assert.Null(cache.GetValue(view));
+
+            editor.CaretIndex = Text.IndexOf("beta", StringComparison.Ordinal);
+
+            Assert.Null(cache.GetValue(view));
+            Assert.Equal(4, view.CurrentSourceLine);
+
+            var raised = 0;
+            view.CurrentSourceLineChanged += (_, _) => raised++;
+            editor.CaretIndex += 1;
+            Assert.Equal(0, raised);
+
+            editor.CaretIndex = 0;
+            Assert.Equal(1, raised);
+            Assert.Equal(0, view.CurrentSourceLine);
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public Task LinePastTheEndClampsToTheEndOfTheText()
     {
         return _fixture.Session.Dispatch(() =>
