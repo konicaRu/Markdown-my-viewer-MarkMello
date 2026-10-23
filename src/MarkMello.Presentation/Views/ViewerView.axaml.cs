@@ -10,7 +10,7 @@ using System.ComponentModel;
 
 namespace MarkMello.Presentation.Views;
 
-public partial class ViewerView : UserControl, IFindHost
+public partial class ViewerView : UserControl, IFindHost, IOutlineNavigationHost
 {
     private const double WheelStepMultiplier = 6.0;
     private const double KeyboardPageOverlap = 48.0;
@@ -228,6 +228,7 @@ public partial class ViewerView : UserControl, IFindHost
         _hasRenderedDocument = true;
         FocusDocumentViewAsync();
         QueueMinimapBuild();
+        UpdateOutlineCurrentLine();
 
         // Keep the active search match in view after a document re-render.
         if (_documentView?.MatchIndex >= 0)
@@ -324,6 +325,7 @@ public partial class ViewerView : UserControl, IFindHost
 
         UpdateMinimapScrollState();
         UpdateMinimapVisibility();
+        UpdateOutlineCurrentLine();
     }
 
     private void OnViewerSizeChanged(object? sender, SizeChangedEventArgs e)
