@@ -25,6 +25,15 @@ public sealed partial class MarkdigMarkdownDocumentRenderer
     private static MarkdownSourceSpan? CreateSourceSpan(Block block, string source)
     {
         int? startLine = block.Line >= 0 ? block.Line : null;
+
+        // У setext-заголовка («Текст» + строка из ---/===) Markdig держит в Line строку
+        // подчёркивания, а не строку текста; Span же начинается с текста. Без поправки
+        // оглавление ведёт курсор на подчёркивание, а конец span уезжает на строку дальше.
+        if (block is HeadingBlock { IsSetext: true } && GetSpanStartLine(block, source) is { } setextStart)
+        {
+            startLine = setextStart;
+        }
+
         int? endLine = startLine is null
             ? null
             : startLine.Value + CountSourceLineBreaks(block, source);
@@ -64,6 +73,26 @@ public sealed partial class MarkdigMarkdownDocumentRenderer
     /// </summary>
     private static int CountSourceLineBreaks(Block block, string source)
         => Math.Max(CountSpanLineBreaks(block, source), CountFenceLineBreaks(block));
+
+    private static int? GetSpanStartLine(Block block, string source)
+    {
+        var start = block.Span.Start;
+        if (start < 0 || start > source.Length)
+        {
+            return null;
+        }
+
+        var line = 0;
+        for (var index = 0; index < start; index++)
+        {
+            if (source[index] == '\n')
+            {
+                line++;
+            }
+        }
+
+        return line;
+    }
 
     private static int CountSpanLineBreaks(Block block, string source)
     {
