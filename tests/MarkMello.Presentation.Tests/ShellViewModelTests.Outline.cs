@@ -143,6 +143,31 @@ public sealed partial class ShellViewModelTests
         Assert.Equal(["Edited"], shell.Outline!.Items.Select(i => i.Text));
     }
 
+    [Fact]
+    public async Task SwitchingTabsSwitchesWhichFoldStateIsUsed()
+    {
+        var harness = CreateHarness(renderer: new HeadingLineMarkdownRenderer());
+        var shell = harness.ViewModel;
+        var pathA = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "fold-a.md");
+        var pathB = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "fold-b.md");
+        harness.Loader.Sources[pathA] = CreateSource(pathA, "# Doc" + "\n" + "## Usage");
+        harness.Loader.Sources[pathB] = CreateSource(pathB, "# Doc" + "\n" + "## Usage");
+        await shell.OpenPathAsync(pathA);
+        var tabA = shell.OpenDocuments.ActiveTab!;
+        await shell.OpenPathAsync(pathB);
+        var tabB = shell.OpenDocuments.ActiveTab!;
+        shell.OutlinePreferences = OutlinePreferences.Default with { IsVisible = true };
+
+        await shell.OpenDocuments.ActivateCommand.ExecuteAsync(tabA);
+        shell.Outline!.Items[0].IsExpanded = false;
+
+        await shell.OpenDocuments.ActivateCommand.ExecuteAsync(tabB);
+        Assert.True(shell.Outline!.Items[0].IsExpanded);
+
+        await shell.OpenDocuments.ActivateCommand.ExecuteAsync(tabA);
+        Assert.False(shell.Outline!.Items[0].IsExpanded);
+    }
+
     private sealed class HeadingLineMarkdownRenderer : IMarkdownDocumentRenderer
     {
         public RenderedMarkdownDocument Render(string markdown) => Render(markdown, null);
@@ -150,8 +175,10 @@ public sealed partial class ShellViewModelTests
         public RenderedMarkdownDocument Render(string markdown, string? baseDirectory)
             => new(markdown.Split('\n')
                 .Select((line, index) => (line, index))
-                .Where(x => x.line.StartsWith("# ", StringComparison.Ordinal))
-                .Select(x => (MarkdownBlock)new MarkdownHeadingBlock(1, [new MarkdownTextInline(x.line[2..])])
+                .Where(x => x.line.StartsWith('#'))
+                .Select(x => (MarkdownBlock)new MarkdownHeadingBlock(
+                    x.line.TakeWhile(c => c == '#').Count(),
+                    [new MarkdownTextInline(x.line.TrimStart('#').Trim())])
                 {
                     SourceSpan = new MarkdownSourceSpan(x.index)
                 })

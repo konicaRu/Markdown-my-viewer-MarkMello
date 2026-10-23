@@ -169,7 +169,7 @@ public partial class ShellViewModel
         }
 
         var document = IsEditMode && EditorSession is not null ? EditorSession.RenderedPreview : RenderedDocument;
-        outline.Update(document, OutlinePreferences);
+        outline.Update(document, OutlinePreferences, OpenDocuments.ActiveTab);
     }
 
     private void RaiseOutlineLayoutProperties()

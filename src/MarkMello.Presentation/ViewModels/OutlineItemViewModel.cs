@@ -7,24 +7,31 @@ namespace MarkMello.Presentation.ViewModels;
 /// <summary>Пункт дерева оглавления. Свёрнутость живёт, пока открыт документ (ADR-0008 Rule 8).</summary>
 public sealed partial class OutlineItemViewModel : ObservableObject
 {
-    private readonly Action _expansionChanged;
+    private readonly Action<OutlineItemViewModel> _expansionChanged;
 
-    internal OutlineItemViewModel(OutlineItem item, OutlineItemViewModel? parent, Action expansionChanged)
+    internal OutlineItemViewModel(
+        OutlineItem item,
+        OutlineItemViewModel? parent,
+        Action<OutlineItemViewModel> expansionChanged,
+        Dictionary<string, int> occurrences)
     {
         Level = item.Level;
         Text = item.Text;
-        SourceLine = item.SourceLine;
+        _sourceLine = item.SourceLine;
+        var pair = $"{item.Level}:{item.Text}";
+        occurrences.TryGetValue(pair, out var index);
+        occurrences[pair] = index + 1;
+        Key = $"{pair}#{index}";
         Parent = parent;
         _expansionChanged = expansionChanged;
         Children = new ObservableCollection<OutlineItemViewModel>(
-            item.Children.Select(child => new OutlineItemViewModel(child, this, expansionChanged)));
+            item.Children.Select(child => new OutlineItemViewModel(child, this, expansionChanged, occurrences)));
     }
 
     public int Level { get; }
 
     public string Text { get; }
 
-    public int SourceLine { get; }
 
     public OutlineItemViewModel? Parent { get; }
 
@@ -34,7 +41,12 @@ public sealed partial class OutlineItemViewModel : ObservableObject
 
     public bool IsTopLevel => Level == 1;
 
-    internal string Key => $"{Level}:{Text}";
+    /// <summary>Идентичность пункта: уровень, текст и порядковый номер такой пары в документе.</summary>
+    internal string Key { get; }
+
+    /// <summary>Строка исходника; правится на месте, когда меняется только положение заголовков.</summary>
+    [ObservableProperty]
+    private int _sourceLine;
 
     [ObservableProperty]
     private bool _isExpanded = true;
@@ -49,5 +61,5 @@ public sealed partial class OutlineItemViewModel : ObservableObject
     [ObservableProperty]
     private double _lineBoxHeight;
 
-    partial void OnIsExpandedChanged(bool value) => _expansionChanged();
+    partial void OnIsExpandedChanged(bool value) => _expansionChanged(this);
 }

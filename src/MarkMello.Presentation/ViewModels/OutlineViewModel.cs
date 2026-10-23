@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MarkMello.Domain;
@@ -11,7 +12,14 @@ namespace MarkMello.Presentation.ViewModels;
 /// </summary>
 public sealed partial class OutlineViewModel : ObservableObject
 {
+    private static readonly object NoDocumentKey = new();
+
+    // Слабые ключи: закрытая вкладка уносит своё состояние свёрнутости, ничего не утекает.
+    private static readonly ConditionalWeakTable<object, HashSet<string>> FoldState = new();
+
     private int? _currentSourceLine;
+    private object? _currentKey;
+    private bool _isApplying;
 
     public ObservableCollection<OutlineItemViewModel> Items { get; } = [];
 
@@ -20,23 +28,109 @@ public sealed partial class OutlineViewModel : ObservableObject
 
     public event EventHandler<int>? NavigateRequested;
 
-    public void Update(RenderedMarkdownDocument document, OutlinePreferences preferences)
+    /// <summary>
+    /// Обновляет дерево. Если набор заголовков (уровень + текст) не изменился и документ тот же,
+    /// существующие пункты правятся на месте: так правка текста не сбрасывает прокрутку панели.
+    /// Свёрнутость хранится отдельно для каждого <paramref name="documentKey"/> (Rules 8 and 9).
+    /// </summary>
+    public void Update(RenderedMarkdownDocument document, OutlinePreferences preferences, object? documentKey = null)
     {
-        var collapsed = Flatten(Items).Where(static i => !i.IsExpanded).Select(static i => i.Key).ToHashSet();
+        var key = documentKey ?? NoDocumentKey;
+        var built = DocumentOutlineBuilder.Build(document, preferences.MaxLevel).Items;
 
-        Items.Clear();
-        foreach (var item in DocumentOutlineBuilder.Build(document, preferences.MaxLevel).Items)
+        if (ReferenceEquals(key, _currentKey) && TryPatchInPlace(built))
         {
-            Items.Add(new OutlineItemViewModel(item, parent: null, RefreshActive));
+            ApplyTypography(preferences);
+            RefreshActive();
+            return;
         }
 
-        foreach (var item in Flatten(Items))
+        _isApplying = true;
+        try
         {
-            item.IsExpanded = !collapsed.Contains(item.Key);
+            _currentKey = key;
+            Items.Clear();
+            var occurrences = new Dictionary<string, int>();
+            foreach (var item in built)
+            {
+                Items.Add(new OutlineItemViewModel(item, parent: null, OnExpansionChanged, occurrences));
+            }
+
+            if (FoldState.TryGetValue(key, out var collapsed) && collapsed.Count > 0)
+            {
+                foreach (var item in Flatten(Items))
+                {
+                    item.IsExpanded = !collapsed.Contains(item.Key);
+                }
+            }
+        }
+        finally
+        {
+            _isApplying = false;
         }
 
         ApplyTypography(preferences);
         IsEmpty = Items.Count == 0;
+        RefreshActive();
+    }
+
+    private bool TryPatchInPlace(IReadOnlyList<OutlineItem> built)
+    {
+        var current = Flatten(Items).ToList();
+        var next = new List<OutlineItem>();
+        FlattenSource(built, next);
+        if (current.Count != next.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            if (current[i].Level != next[i].Level || current[i].Text != next[i].Text)
+            {
+                return false;
+            }
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            current[i].SourceLine = next[i].SourceLine;
+        }
+
+        return true;
+    }
+
+    private static void FlattenSource(IEnumerable<OutlineItem> items, List<OutlineItem> into)
+    {
+        foreach (var item in items)
+        {
+            into.Add(item);
+            FlattenSource(item.Children, into);
+        }
+    }
+
+    // Фиксируем только действия пользователя: пока Update сам расставляет состояние,
+    // переходные пересборки при смене вкладки не должны затирать сохранённое.
+    private void OnExpansionChanged(OutlineItemViewModel item)
+    {
+        if (_isApplying)
+        {
+            return;
+        }
+
+        if (_currentKey is { } key)
+        {
+            var collapsed = FoldState.GetOrCreateValue(key);
+            if (item.IsExpanded)
+            {
+                collapsed.Remove(item.Key);
+            }
+            else
+            {
+                collapsed.Add(item.Key);
+            }
+        }
+
         RefreshActive();
     }
 

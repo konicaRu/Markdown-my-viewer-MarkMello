@@ -91,6 +91,130 @@ public sealed class OutlineViewModelTests
     }
 
     [Fact]
+    public void FoldStateIsKeptPerDocumentKey()
+    {
+        var keyA = new object();
+        var keyB = new object();
+        var vm = new OutlineViewModel();
+        vm.Update(Guide, OutlinePreferences.Default, keyA);
+        vm.Items[0].Children[0].IsExpanded = false;
+
+        vm.Update(Guide, OutlinePreferences.Default, keyB);
+        Assert.All(Flatten(vm.Items), i => Assert.True(i.IsExpanded));
+
+        vm.Update(Guide, OutlinePreferences.Default, keyA);
+        Assert.False(vm.Items[0].Children[0].IsExpanded);
+        Assert.True(vm.Items[0].Children[1].IsExpanded);
+    }
+
+    [Fact]
+    public void FoldChangesAppliedByUpdateAreNotRecorded()
+    {
+        var keyA = new object();
+        var keyB = new object();
+        var vm = new OutlineViewModel();
+        vm.Update(Guide, OutlinePreferences.Default, keyA);
+        vm.Items[0].Children[0].IsExpanded = false;
+
+        // B shares no state with A; the transient rebuild must not overwrite A's saved folds.
+        vm.Update(Guide, OutlinePreferences.Default, keyB);
+        vm.Update(Guide, OutlinePreferences.Default, keyA);
+
+        Assert.False(vm.Items[0].Children[0].IsExpanded);
+    }
+
+    [Fact]
+    public void ExpandingAgainRemovesTheSavedFold()
+    {
+        var key = new object();
+        var vm = new OutlineViewModel();
+        vm.Update(Guide, OutlinePreferences.Default, key);
+        vm.Items[0].Children[0].IsExpanded = false;
+        vm.Items[0].Children[0].IsExpanded = true;
+
+        vm.Update(RenderedMarkdownDocument.Empty, OutlinePreferences.Default, key);
+        vm.Update(Guide, OutlinePreferences.Default, key);
+
+        Assert.True(vm.Items[0].Children[0].IsExpanded);
+    }
+
+    [Fact]
+    public void HeadingsWithTheSameTextFoldIndependently()
+    {
+        var document = new RenderedMarkdownDocument(
+        [
+            H(1, "Doc", 0), H(2, "Example", 1), H(3, "Deep", 2), H(2, "Example", 4), H(3, "Deep", 5)
+        ]);
+        var key = new object();
+        var vm = new OutlineViewModel();
+        vm.Update(document, OutlinePreferences.Default, key);
+
+        vm.Items[0].Children[1].IsExpanded = false;
+        Assert.True(vm.Items[0].Children[0].IsExpanded);
+
+        var shifted = new RenderedMarkdownDocument(
+        [
+            H(1, "Doc", 0), H(2, "Example", 3), H(3, "Deep", 4), H(2, "Example", 8), H(3, "Deep", 9), H(2, "Tail", 12)
+        ]);
+        vm.Update(shifted, OutlinePreferences.Default, key);
+
+        Assert.True(vm.Items[0].Children[0].IsExpanded);
+        Assert.False(vm.Items[0].Children[1].IsExpanded);
+    }
+
+    [Fact]
+    public void SameStructureIsPatchedInPlaceAndSourceLinesFollow()
+    {
+        var key = new object();
+        var vm = new OutlineViewModel();
+        vm.Update(Guide, OutlinePreferences.Default, key);
+        var before = Flatten(vm.Items).ToList();
+        var shifted = new RenderedMarkdownDocument(
+        [
+            H(1, "Guide", 10), H(2, "Install", 12), H(3, "Windows", 14), H(3, "Linux", 18), H(2, "Run", 22)
+        ]);
+        vm.SetCurrentSourceLine(19);
+
+        vm.Update(shifted, OutlinePreferences.Default, key);
+
+        var after = Flatten(vm.Items).ToList();
+        Assert.Equal(before.Count, after.Count);
+        for (var i = 0; i < before.Count; i++)
+        {
+            Assert.Same(before[i], after[i]);
+        }
+
+        Assert.Equal([10, 12, 14, 18, 22], after.Select(i => i.SourceLine));
+        Assert.True(after[3].IsActive);
+    }
+
+    [Fact]
+    public void DifferentStructureRebuildsTheTree()
+    {
+        var key = new object();
+        var vm = new OutlineViewModel();
+        vm.Update(Guide, OutlinePreferences.Default, key);
+        var first = vm.Items[0];
+
+        vm.Update(new RenderedMarkdownDocument([H(1, "Guide", 0), H(2, "Install", 2)]), OutlinePreferences.Default, key);
+
+        Assert.NotSame(first, vm.Items[0]);
+        Assert.Equal(2, Flatten(vm.Items).Count());
+    }
+
+    [Fact]
+    public void SameStructureWithAnotherDocumentKeyRebuilds()
+    {
+        var vm = new OutlineViewModel();
+        vm.Update(Guide, OutlinePreferences.Default, new object());
+        var first = vm.Items[0];
+
+        vm.Update(Guide, OutlinePreferences.Default, new object());
+
+        Assert.NotSame(first, vm.Items[0]);
+    }
+
+    [Fact]
     public void NavigateRaisesSourceLine()
     {
         var vm = Create();
