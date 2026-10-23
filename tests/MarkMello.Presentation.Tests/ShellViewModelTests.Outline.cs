@@ -80,4 +80,36 @@ public sealed partial class ShellViewModelTests
             new MarkdownHeadingBlock(1, [new MarkdownTextInline("One")]) { SourceSpan = new MarkdownSourceSpan(0) },
             new MarkdownHeadingBlock(1, [new MarkdownTextInline("Two")]) { SourceSpan = new MarkdownSourceSpan(4) }
         ]);
+
+    [Fact]
+    public void LevelSettingsChangeFontSizeAndMaxLevel()
+    {
+        var shell = CreateHarness().ViewModel;
+        var h2 = shell.OutlineLevelSettings[1];
+        var before = shell.OutlinePreferences.H2FontSize;
+
+        h2.IncreaseFontSizeCommand.Execute(null);
+        shell.OutlineLevelSettings[4].IsMaxLevel = true;
+
+        Assert.Equal(before + 1, shell.OutlinePreferences.H2FontSize);
+        Assert.Equal($"{before + 1} px", h2.FontSizeLabel);
+        Assert.Equal(5, shell.OutlinePreferences.MaxLevel);
+        Assert.True(shell.OutlineLevelSettings[4].IsWithinMaxLevel);
+        Assert.False(shell.OutlineLevelSettings[5].IsWithinMaxLevel);
+    }
+
+    [Fact]
+    public void LineHeightStepsAndSideSelection()
+    {
+        var shell = CreateHarness().ViewModel;
+        var before = shell.OutlinePreferences.LineHeight;
+
+        shell.IncreaseOutlineLineHeightCommand.Execute(null);
+        shell.IsOutlineRightSelected = true;
+
+        Assert.Equal(before + OutlinePreferences.LineHeightStep, shell.OutlinePreferences.LineHeight, 3);
+        Assert.Equal(OutlinePanelSide.Right, shell.OutlinePreferences.Side);
+        Assert.True(shell.IsOutlineRightSelected);
+        Assert.False(shell.IsOutlineLeftSelected);
+    }
 }
