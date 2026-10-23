@@ -36,6 +36,11 @@ public sealed partial class OutlineLevelSetting : ObservableObject
             {
                 _apply(_get() with { MaxLevel = Level });
             }
+            else
+            {
+                // Клик по уже выбранному сегменту снимает галочку у ToggleButton: вернуть её.
+                OnPropertyChanged(nameof(IsMaxLevel));
+            }
         }
     }
 

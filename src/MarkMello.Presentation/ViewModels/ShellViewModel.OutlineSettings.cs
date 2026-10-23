@@ -37,6 +37,11 @@ public partial class ShellViewModel
             {
                 ApplyOutlinePreferences(OutlinePreferences with { Side = OutlinePanelSide.Left });
             }
+            else
+            {
+                // Клик по уже выбранному сегменту снимает галочку у ToggleButton: вернуть её.
+                OnPropertyChanged(nameof(IsOutlineLeftSelected));
+            }
         }
     }
 
@@ -48,6 +53,11 @@ public partial class ShellViewModel
             if (value)
             {
                 ApplyOutlinePreferences(OutlinePreferences with { Side = OutlinePanelSide.Right });
+            }
+            else
+            {
+                // Клик по уже выбранному сегменту снимает галочку у ToggleButton: вернуть её.
+                OnPropertyChanged(nameof(IsOutlineRightSelected));
             }
         }
     }
