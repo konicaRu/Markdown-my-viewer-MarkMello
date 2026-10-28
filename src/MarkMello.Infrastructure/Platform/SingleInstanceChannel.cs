@@ -15,6 +15,8 @@ namespace MarkMello.Infrastructure.Platform;
 /// </summary>
 public sealed class SingleInstanceChannel : IDisposable
 {
+    private const int MaxPathLength = 4096;
+
     private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(3);
 
     private readonly Mutex _ownership;
@@ -49,7 +51,12 @@ public sealed class SingleInstanceChannel : IDisposable
     {
         try
         {
-            using var client = new NamedPipeClientStream(".", $"MarkMello.{BuildKey(identity)}", PipeDirection.Out);
+            // CurrentUserOnly: клиент отказывается писать в канал, чей владелец — другой пользователь.
+            using var client = new NamedPipeClientStream(
+                ".",
+                $"MarkMello.{BuildKey(identity)}",
+                PipeDirection.Out,
+                PipeOptions.CurrentUserOnly);
             client.Connect((int)SendTimeout.TotalMilliseconds);
             using var writer = new StreamWriter(client, new UTF8Encoding(false));
             writer.Write(path);
@@ -90,14 +97,16 @@ public sealed class SingleInstanceChannel : IDisposable
                     PipeDirection.In,
                     NamedPipeServerStream.MaxAllowedServerInstances,
                     PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                 await server.WaitForConnectionAsync(token).ConfigureAwait(false);
 
                 using var reader = new StreamReader(server, new UTF8Encoding(false));
-                var path = await reader.ReadToEndAsync(token).ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(path))
+                var buffer = new char[MaxPathLength + 1];
+                var read = await reader.ReadBlockAsync(buffer.AsMemory(), token).ConfigureAwait(false);
+                var path = new string(buffer, 0, read).Trim();
+                if (IsAcceptablePath(path))
                 {
-                    onPath(path.Trim());
+                    onPath(path);
                 }
             }
             catch (OperationCanceledException)
@@ -111,9 +120,21 @@ public sealed class SingleInstanceChannel : IDisposable
         }
     }
 
+    /// <summary>
+    /// Путь из канала — недоверенный ввод. Принимаются только полные локальные пути:
+    /// UNC и device-пути отбрасываются до любого обращения к файловой системе, иначе
+    /// сама проверка существования файла пошла бы на чужой SMB-ресурс.
+    /// </summary>
+    public static bool IsAcceptablePath(string? path)
+        => !string.IsNullOrWhiteSpace(path)
+           && path.Length <= MaxPathLength
+           && Path.IsPathFullyQualified(path)
+           && !path.StartsWith(@"\\", StringComparison.Ordinal)
+           && !path.StartsWith("//", StringComparison.Ordinal);
+
     private static string BuildKey(string? identity)
     {
-        var source = identity ?? Environment.ProcessPath ?? "MarkMello";
+        var source = $"{Environment.UserDomainName}\\{Environment.UserName}|{identity ?? Environment.ProcessPath ?? "MarkMello"}";
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(source.ToUpperInvariant()));
         return Convert.ToHexString(hash, 0, 8);
     }

@@ -52,7 +52,7 @@ public sealed class SingleInstanceChannelTests
             }
         });
 
-        foreach (var name in new[] { "a.md", "b.md", "c.md" })
+        foreach (var name in new[] { @"C:\d\a.md", @"C:\d\b.md", @"C:\d\c.md" })
         {
             Assert.True(SingleInstanceChannel.TrySend(name, identity));
         }
@@ -60,7 +60,45 @@ public sealed class SingleInstanceChannelTests
         await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
         lock (received)
         {
-            Assert.Equal(["a.md", "b.md", "c.md"], received.Order().ToArray());
+            Assert.Equal([@"C:\d\a.md", @"C:\d\b.md", @"C:\d\c.md"], received.Order().ToArray());
+        }
+    }
+
+    [Theory]
+    [InlineData(@"\\attacker\share\x.md", false)]
+    [InlineData(@"\\?\C:\x.md", false)]
+    [InlineData("relative.md", false)]
+    [InlineData("", false)]
+    [InlineData(@"C:\docs\x.md", true)]
+    public void OnlyFullyQualifiedLocalPathsAreAccepted(string path, bool expected)
+        => Assert.Equal(expected, SingleInstanceChannel.IsAcceptablePath(path));
+
+    [Fact]
+    public async Task UncPathSentOverThePipeNeverReachesTheHandler()
+    {
+        var identity = Guid.NewGuid().ToString();
+        var received = new List<string>();
+        var valid = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var first = SingleInstanceChannel.TryClaim(identity);
+        Assert.NotNull(first);
+        first.StartListening(path =>
+        {
+            lock (received)
+            {
+                received.Add(path);
+            }
+
+            valid.TrySetResult();
+        });
+
+        Assert.True(SingleInstanceChannel.TrySend(@"\\attacker\share\x.md", identity));
+        Assert.True(SingleInstanceChannel.TrySend(@"C:\d\ok.md", identity));
+
+        await valid.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        lock (received)
+        {
+            Assert.Equal([@"C:\d\ok.md"], received);
         }
     }
 }
