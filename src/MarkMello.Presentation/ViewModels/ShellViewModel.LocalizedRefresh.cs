@@ -7,6 +7,7 @@ public partial class ShellViewModel
         RefreshAdvancedReadingProperties();
         RefreshInterfaceTypographyProperties();
         RefreshOutlineSettingsProperties();
+        RefreshCloseConfirmationTexts();
         _languageOptions = CreateLanguageOptions();
 
         NotifyLocalizedBindingPropertiesChanged();

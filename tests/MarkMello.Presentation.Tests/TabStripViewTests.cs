@@ -64,6 +64,7 @@ public sealed class TabStripViewTests
         return _fixture.RunAsync(async () =>
         {
             var viewModel = CreateViewModel();
+            viewModel.ConfirmBeforeClose = false;
             // Вкладки существуют только в режиме открытой папки (ADR-0007 Rule 4).
             await viewModel.OpenFolderPathAsync(@"C:\docs");
             await viewModel.OpenPathAsync(@"C:\docs\first.md");

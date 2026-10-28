@@ -11,4 +11,5 @@ internal sealed record SettingsFileModel(
     WindowBorderMode WindowBorder = WindowBorderMode.Auto,
     double? SidebarWidth = null,
     WorkspaceSessionState? Session = null,
-    OutlinePreferences? Outline = null);
+    OutlinePreferences? Outline = null,
+    bool? ConfirmBeforeClose = null);

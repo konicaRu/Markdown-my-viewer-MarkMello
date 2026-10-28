@@ -347,6 +347,7 @@ public sealed partial class ShellViewModelTests
     public async Task CloseFileCommandReturnsViewingDocumentToWelcome()
     {
         var harness = CreateHarness();
+        harness.ViewModel.ConfirmBeforeClose = false;
         var path = Path.Combine(Path.GetTempPath(), "MarkMello.Tests", "one.md");
         harness.Loader.Sources[path] = CreateSource(path, "alpha beta");
 

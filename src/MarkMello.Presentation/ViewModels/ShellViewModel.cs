@@ -461,6 +461,7 @@ public partial class ShellViewModel : ObservableObject
     {
         ReadingPreferences = await _settings.LoadPreferencesAsync().ConfigureAwait(true);
         await LoadOutlinePreferencesAsync().ConfigureAwait(true);
+        await LoadConfirmBeforeCloseAsync().ConfigureAwait(true);
 
         var savedLanguage = await _settings.LoadLanguageAsync().ConfigureAwait(true);
         ApplyLanguageSelection(savedLanguage, persist: false);
@@ -514,6 +515,11 @@ public partial class ShellViewModel : ObservableObject
     private async Task CloseFileAsync()
     {
         CloseOverlayCore();
+        if (EditorSession?.IsDirty != true && TryRequestCloseConfirmation("CloseConfirmFile", CloseFileCoreAsync))
+        {
+            return;
+        }
+
         await RunWithDirtyCheckAsync(
                 PendingDirtyActionKind.CloseFile,
                 CloseFileCoreAsync)
@@ -633,6 +639,7 @@ public partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void CancelDirtyPrompt()
     {
+        _windowCloseConfirmed = false;
         ClearDirtyPrompt();
     }
 
@@ -782,6 +789,12 @@ public partial class ShellViewModel : ObservableObject
             return;
         }
 
+        if (IsCloseConfirmOpen)
+        {
+            DismissCloseConfirmation();
+            return;
+        }
+
         if (HasOpenOverlay)
         {
             CloseOverlayCore();
@@ -817,7 +830,14 @@ public partial class ShellViewModel : ObservableObject
         // проходит по всем несохранённым вкладкам по очереди.
         if (FindFirstDirtyTab() is not { } dirtyTab)
         {
-            return false;
+            // Вопрос про окно задаём один раз: после «Сохранить / Не сохранять» он уже был.
+            if (_windowCloseConfirmed || !OpenDocuments.HasTabs
+                || !TryRequestCloseConfirmation("CloseConfirmWindow", ConfirmWindowCloseAsync))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         if (!ReferenceEquals(OpenDocuments.ActiveTab, dirtyTab))
@@ -827,13 +847,16 @@ public partial class ShellViewModel : ObservableObject
 
         QueueDirtyAction(
             PendingDirtyActionKind.CloseWindow,
-            () =>
-            {
-                CloseRequested?.Invoke(this, EventArgs.Empty);
-                return Task.CompletedTask;
-            });
+            ConfirmWindowCloseAsync);
 
         return true;
+    }
+
+    private Task ConfirmWindowCloseAsync()
+    {
+        _windowCloseConfirmed = true;
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+        return Task.CompletedTask;
     }
 
     partial void OnDocumentChanged(MarkdownSource? value)

@@ -103,6 +103,7 @@ public sealed class PerTabEditorSessionTests
     public async Task CleanTabsDoNotBlockClosingTheWindow()
     {
         var harness = CreateHarness();
+        harness.ViewModel.ConfirmBeforeClose = false;
         await harness.ViewModel.OpenPathAsync(@"C:\docs\first.md");
         await harness.ViewModel.OpenPathAsync(@"C:\docs\second.md");
 

@@ -165,6 +165,11 @@ public partial class ShellViewModel
             return;
         }
 
+        if (TryRequestCloseConfirmation("CloseConfirmTab", () => RemoveTabAsync(tab)))
+        {
+            return;
+        }
+
         await RemoveTabAsync(tab).ConfigureAwait(true);
     }
 

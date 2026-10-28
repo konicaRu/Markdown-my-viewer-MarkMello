@@ -41,6 +41,7 @@
             <views:ReadingLetterSpacingView />
             <views:InterfaceFontSizeSettingsView />
             <views:OutlineSettingsView />
+            <views:CloseConfirmationSettingsView />
           </StackPanel>
         </Border>
       </ScrollViewer>

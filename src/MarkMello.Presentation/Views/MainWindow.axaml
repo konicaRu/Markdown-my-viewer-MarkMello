@@ -761,6 +761,8 @@
             </StackPanel>
           </Border>
         </Grid>
+
+        <views:CloseConfirmationOverlay />
       </Panel>
 
       </Grid>

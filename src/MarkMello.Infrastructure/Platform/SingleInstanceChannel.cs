@@ -129,8 +129,9 @@ public sealed class SingleInstanceChannel : IDisposable
         => !string.IsNullOrWhiteSpace(path)
            && path.Length <= MaxPathLength
            && Path.IsPathFullyQualified(path)
-           && !path.StartsWith(@"\\", StringComparison.Ordinal)
-           && !path.StartsWith("//", StringComparison.Ordinal);
+           && !(path.Length >= 2 && IsSeparator(path[0]) && IsSeparator(path[1]));
+
+    private static bool IsSeparator(char c) => c is '\\' or '/';
 
     private static string BuildKey(string? identity)
     {

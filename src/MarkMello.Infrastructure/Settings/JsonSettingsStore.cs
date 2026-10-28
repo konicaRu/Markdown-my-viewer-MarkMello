@@ -23,6 +23,7 @@ public sealed class JsonSettingsStore : ISettingsStore
     private WindowBorderMode _windowBorder = WindowBorderMode.Auto;
     private WindowPlacement? _windowPlacement;
     private double _sidebarWidth = WorkspaceSidebarWidth.Default;
+    private bool _confirmBeforeClose = true;
     private WorkspaceSessionState _session = WorkspaceSessionState.Empty;
     private OutlinePreferences _outline = OutlinePreferences.Default;
 
@@ -182,6 +183,31 @@ public sealed class JsonSettingsStore : ISettingsStore
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask<bool> LoadConfirmBeforeCloseAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_gate)
+        {
+            EnsureLoadedCore();
+            return ValueTask.FromResult(_confirmBeforeClose);
+        }
+    }
+
+    public ValueTask SaveConfirmBeforeCloseAsync(bool confirm, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_gate)
+        {
+            EnsureLoadedCore();
+            _confirmBeforeClose = confirm;
+            PersistCore();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask<WorkspaceSessionState> LoadSessionAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -262,6 +288,7 @@ public sealed class JsonSettingsStore : ISettingsStore
                         _sidebarWidth = WorkspaceSidebarWidth.Normalize(fileModel.SidebarWidth);
                         _session = fileModel.Session ?? WorkspaceSessionState.Empty;
                         _outline = OutlinePreferences.Normalize(fileModel.Outline);
+                        _confirmBeforeClose = fileModel.ConfirmBeforeClose ?? true;
                     }
                 }
             }
@@ -276,6 +303,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             _sidebarWidth = WorkspaceSidebarWidth.Default;
             _session = WorkspaceSessionState.Empty;
             _outline = OutlinePreferences.Default;
+            _confirmBeforeClose = true;
         }
         finally
         {
@@ -304,7 +332,8 @@ public sealed class JsonSettingsStore : ISettingsStore
                 _windowBorder,
                 _sidebarWidth,
                 _session,
-                _outline);
+                _outline,
+                _confirmBeforeClose);
             var json = JsonSerializer.Serialize(
                 fileModel,
                 MarkMelloJsonSerializerContext.Default.SettingsFileModel);

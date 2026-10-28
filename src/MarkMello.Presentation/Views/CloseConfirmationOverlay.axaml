@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MarkMello.Presentation.ViewModels"
+             x:Class="MarkMello.Presentation.Views.CloseConfirmationOverlay"
+             x:DataType="vm:ShellViewModel">
+  <Grid IsVisible="{Binding IsCloseConfirmOpen}"
+        Background="#66000000">
+    <Border Classes="mm-dialog-card"
+            Width="380"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+      <StackPanel>
+        <TextBlock Classes="mm-dialog-title"
+                   Text="{Binding CloseConfirmTitle}" />
+        <TextBlock Classes="mm-dialog-body"
+                   Text="{Binding CloseConfirmMessage}" />
+        <CheckBox Margin="0,14,0,0"
+                  IsChecked="{Binding CloseConfirmDontAsk, Mode=TwoWay}"
+                  Content="{Binding CloseConfirmDontAskLabel}" />
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,18,0,0">
+          <Button Classes="mm-dialog-secondary"
+                  Content="{Binding CloseConfirmCancel}"
+                  Command="{Binding CancelCloseConfirmCommand}" />
+          <Button Classes="mm-dialog-primary"
+                  Content="{Binding CloseConfirmAccept}"
+                  Command="{Binding AcceptCloseConfirmCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

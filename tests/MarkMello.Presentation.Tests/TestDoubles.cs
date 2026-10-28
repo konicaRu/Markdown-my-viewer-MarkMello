@@ -134,6 +134,17 @@ internal sealed class InMemorySettingsStore : ISettingsStore
         return ValueTask.CompletedTask;
     }
 
+    public bool ConfirmBeforeClose { get; set; } = true;
+
+    public ValueTask<bool> LoadConfirmBeforeCloseAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(ConfirmBeforeClose);
+
+    public ValueTask SaveConfirmBeforeCloseAsync(bool confirm, CancellationToken cancellationToken = default)
+    {
+        ConfirmBeforeClose = confirm;
+        return ValueTask.CompletedTask;
+    }
+
     public OutlinePreferences OutlinePreferences { get; set; } = OutlinePreferences.Default;
 
     public ValueTask<OutlinePreferences> LoadOutlinePreferencesAsync(CancellationToken cancellationToken = default)

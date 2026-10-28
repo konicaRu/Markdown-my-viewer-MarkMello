@@ -109,6 +109,7 @@ public sealed class DocumentTabsShellTests
     public async Task ClosingTabActivatesNeighbourAndRestoresIt()
     {
         var harness = CreateHarness();
+        harness.ViewModel.ConfirmBeforeClose = false;
         await harness.ViewModel.OpenPathAsync(@"C:\docs\first.md");
         await harness.ViewModel.OpenPathAsync(@"C:\docs\second.md");
 
@@ -123,6 +124,7 @@ public sealed class DocumentTabsShellTests
     public async Task ClosingTheLastTabWithoutFolderReturnsToWelcome()
     {
         var harness = CreateHarness();
+        harness.ViewModel.ConfirmBeforeClose = false;
         await harness.ViewModel.OpenPathAsync(@"C:\docs\first.md");
 
         await harness.ViewModel.CloseActiveTabCommand.ExecuteAsync(null);
@@ -137,6 +139,7 @@ public sealed class DocumentTabsShellTests
     public async Task ClosingTheLastTabInsideFolderShowsEmptySurface()
     {
         var harness = CreateHarness();
+        harness.ViewModel.ConfirmBeforeClose = false;
         await harness.ViewModel.OpenFolderPathAsync(Root);
         Assert.Single(harness.ViewModel.OpenDocuments.Tabs);
 
